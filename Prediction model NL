@@ -1,0 +1,109 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+data1 = np.loadtxt('data1.txt', skiprows=51, usecols=(-7, -6, -3, -2, -1))
+data2 = np.loadtxt('data.txt', skiprows=103, usecols=(-9, -8, -4, -2, -1))
+
+period1, errperiod1, eta1, dampingtime1, errdtime1 = data1.T
+
+period2, errperiod2, eta2, dampingtime2, errdtime2 = data2.T
+
+period = np.concatenate((period1, period2)) * 60
+errperiod = np.concatenate((errperiod1, errperiod2)) * 60
+dampingtime = np.concatenate((dampingtime1, dampingtime2)) * 60
+errdtime = np.concatenate((errdtime1, errdtime2)) * 60
+eta_obs = np.concatenate((eta1, eta2))
+
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 101
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 101
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 101
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+ntau_d =101
+obs_values = np.linspace(0.01, 10, ntau_d)
+
+# Creación de malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+# Modelo 4: Amortiguamiento no lineal
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * eta_values / R_grid)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+# Cálculo de tau_d mínimo y máximo para cada e
+tau_d_min_values = []
+tau_d_max_values = []
+
+for e in eta_values:
+    tau_d = 40 * np.sqrt(np.pi)* (1 / (2 * np.pi * e / R_grid)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+    tau_d_min_values.append(np.min(tau_d))
+    tau_d_max_values.append(np.max(tau_d))
+
+tau_d_min_values = np.array(tau_d_min_values)
+tau_d_max_values = np.array(tau_d_max_values)
+
+plt.figure(figsize=(8, 6))
+plt.scatter(eta_obs, dampingtime/period, edgecolors='black', facecolors='darkorange')
+plt.xlabel('$\eta$ (Mm)', fontsize=19)
+plt.ylabel(r'$\tau_d/P$', fontsize=19)
+plt.fill_between(eta_values, tau_d_min_values, tau_d_max_values, color='orange', alpha=0.2, label=r'Predicción $M_{NL}$')
+plt.ylim([0, 10])
+plt.xlim([-0.15, 30.5])
+plt.legend(fontsize=15)
+plt.show()
+
+
+
+# Modelo 1: Resonant Damping
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 101
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 101
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 60, 1250, 101
+P_values = np.linspace(P_min, P_max, nP)
+
+# Creación de malla de valores
+Z, LR = np.meshgrid(zeta, lR)  
+
+# Cálculo de tau_d / P para el modelo
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+# Cálculo de tau_d mínimo y máximo para cada P
+tau_d_min_values = []
+tau_d_max_values = []
+
+for eta in P_values:
+    tau_d = (2 * (Z + 1)) / (np.pi * LR * (Z - 1))
+    tau_d_min_values.append(np.min(tau_d))
+    tau_d_max_values.append(np.max(tau_d))
+
+tau_d_min_values = np.array(tau_d_min_values)
+tau_d_max_values = np.array(tau_d_max_values)
+
+
+# Gráfica del modelo 1
+plt.figure(figsize=(8, 6))
+plt.scatter(eta_obs, dampingtime/period, edgecolors='black', facecolors='darkorange')
+plt.xlabel('$\eta$ (Mm)', fontsize=19)
+plt.ylabel(r'$\tau_d/P$', fontsize=19)
+plt.fill_between(eta_values, tau_d_min_values, tau_d_max_values, color='orange', alpha=0.2, label=r'Predicción $M_{AR}$')
+plt.ylim([0, 10])
+plt.xlim([-0.15, 30.5])
+plt.legend(fontsize=15)
+plt.show()
+
