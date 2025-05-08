@@ -1,0 +1,90 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+wmin, wmax, nw = 0.5, 20, 700
+w = np.linspace(wmin, wmax, nw)
+
+nu = 4 * 10**(-3)
+
+rlmin, rlmax, nrl = 0.0001, 0.3, 700  # Mm (1Mm = 1000km)
+rl = np.linspace(rlmin, rlmax, nrl)
+
+P_min, P_max, nP = 150, 1250, 700
+P_values = np.linspace(P_min, P_max, nP)
+
+P_fixed = 150
+
+tau_d_min, tau_d_max, ntau_d = 0.01, 10, 700
+obs_values = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Modelo 3: Fuga de ondas
+
+# Cálculo de tau_d / P
+r3 = (4 / (np.pi**4)) * rl**(-2)
+
+# Modelo 2: Mezcla de fases
+
+# Cálculo de tau_d / P
+r2 = (3 / (np.pi**2 * nu))**(1/3) * (w**(2/3)) * (P_fixed**(-1/3))
+
+# Priors uniformes para zeta y L/R
+prior_rl = 1 / (rlmax - rlmin)
+prior_w = 1 / (wmax - wmin)
+
+sigma_3 = 0.1 * obs_values[:, None]
+
+
+like2_obs = (1 / (np.sqrt(2 * np.pi) * sigma_3)) * np.exp(-((obs_values[:, None] - r3) ** 2) / (2 * sigma_3 ** 2))
+posterior2 = like2_obs * prior_rl
+marginals_ = np.trapz(posterior2, rl)
+
+sigma_2 = 0.1 * obs_values[:, None]
+
+like2_obs = (1 / (np.sqrt(2 * np.pi) * sigma_2)) * np.exp(-((obs_values[:, None] - r2) ** 2) / (2 * sigma_2 ** 2))
+posterior2 = like2_obs * prior_w
+marginals_2 = np.trapz(posterior2, w)
+
+
+bf23 = 2 * np.log(marginals_2 / marginals_)
+bf32 = 2 * np.log(marginals_ / marginals_2)
+
+plt.plot(obs_values, bf23, linewidth=1.5, color='black')
+plt.plot(obs_values, bf32, linewidth=1.5, color='black', linestyle='dashed')
+
+plt.fill_between(obs_values, -30, 30, where=(2 <= bf23) & (bf23 < 6), color='lightgreen', alpha=0.35)
+plt.fill_between(obs_values, -30, 30, where=(6 <= bf23) & (bf23 < 10), color='limegreen', alpha=0.4)
+plt.fill_between(obs_values, -30, 30, where=(bf23 >= 10), color='forestgreen', alpha=0.6)
+
+plt.fill_between(obs_values, -30, 30, where=(2 <= bf32) & (bf32 < 6), color='lightgreen', alpha=0.35)
+plt.fill_between(obs_values, -30, 30, where=(6 <= bf32) & (bf32 < 10), color='limegreen', alpha=0.4)
+plt.fill_between(obs_values, -30, 30, where=(bf32 >= 10), color='forestgreen', alpha=0.6)
+
+plt.text(4.6, -7, r"$BF_{FOMF}$", fontsize=12, color='black', rotation=0)  
+plt.text(4.6, 5.6, r"$BF_{MFFO}$", fontsize=12, color='black', rotation=0)
+
+plt.text(7.7, 21, "$EP$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(8.5, 21, "$EF$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(9.45, 21, "$EMF$", fontsize=11, ha='center', color='black', rotation=0) 
+plt.text(6.83, 21, "$EAM$", fontsize=11, ha='center', color='black', rotation=0)
+
+plt.text(7.7, 18, "$M_{FO}$", fontsize=10.5, ha='center', color='black', rotation=0)  
+plt.text(8.5, 18, "$M_{FO}$", fontsize=10.5, ha='center', color='black', rotation=0)  
+plt.text(9.45, 18, "$M_{FO}$", fontsize=10.5, ha='center', color='black', rotation=0) 
+plt.text(4.75, 18, "$M_{MF}$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(0.79, 18, "$M_{FO}$", fontsize=9, ha='center', color='black', rotation=0)  
+
+plt.text(4.75, 21, "$EP$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(2, 21, "$EAM$", fontsize=11, ha='center', color='black', rotation=0)
+plt.text(0.79, 21, "$EP$", fontsize=10.8, ha='center', color='black', rotation=0)  
+
+
+plt.xlabel(r"$\tau_d/P$", fontsize=14)
+plt.ylabel(r"$2\ln(\mathrm{BF_{M_1M_2}})$", fontsize=14)
+plt.ylim(-25, 25)
+plt.xlim([0.08, 10])
+plt.xticks(np.arange(0, 11, 1)) 
+plt.show()
