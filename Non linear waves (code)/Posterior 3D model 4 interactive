@@ -1,0 +1,70 @@
+import numpy as np
+import plotly.graph_objects as go
+import plotly.io as pio
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 100
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 100
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 100
+eta_vals = np.linspace(eta_min, eta_max, neta) 
+
+tau_d_min, tau_d_max, ntau_d = 0.9, 10, 100
+tau_P_vals = np.linspace(tau_d_min, tau_d_max, ntau_d)
+          
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)               
+zeta_grid, R_grid = np.meshgrid(zeta, R)  
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+
+def r4(R, zeta, eta):
+    a = eta / R
+    # Cálculo de tau_d / P
+    r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + zeta) / np.sqrt(zeta**2 - 2*zeta + 97))
+    return r4
+
+def marginal(eta, tau_P):
+    tau_P_pred = r4(R_grid, zeta_grid, eta)
+    
+    # Calcular likelihood 
+    sigma = 0.1 * tau_P
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+
+    posterior = likelihood * prior_R * prior_zeta
+    
+    marginal = np.trapz(np.trapz(posterior, R, axis=0), zeta, axis=0)
+    
+    return marginal
+
+vectorized_pd = np.vectorize(marginal)
+marginals_ = vectorized_pd(eta_grid, tau_P_grid)
+
+marginals_ /= np.sum(marginals_)
+
+# Gráfico 3D interactivo 
+fig = go.Figure(data=[go.Surface(z=marginals_, x=eta_vals, y=tau_P_vals, colorscale='OrRd')])
+
+fig.update_layout(
+    title=r"σ=10%",
+    scene=dict(
+            xaxis_title=r'η (Mm)',
+            yaxis_title=r'τd/P',
+            zaxis_title=r"p(η, τd/P | M_NL)"
+        )
+    )
+
+# Guardar y abrir en el navegador
+html_file = "Marginal_likelihood_M_NL_3D.html"
+pio.write_html(fig, html_file, auto_open=True)
+
+ 
