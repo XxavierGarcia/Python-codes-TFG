@@ -1,0 +1,88 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 800
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 800
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 100, 1200, 800
+P_values = np.linspace(P_min, P_max, nP) 
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)  
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi)**2 * (1 / LR) * ((Z + 1) / (Z - 1))  # tau_d/P
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Valores observacionales 
+obs_values = 1.5  
+sigma = 0.4 * obs_values
+
+# Cálculo y visualización del posterior en 3D y 2D 
+
+# Cálculo de la likelihood 
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+         np.exp(-((obs_values - r1)**2) / (2 * sigma**2))
+    
+# Cálculo del posterior
+posterior = like1_obs * prior_zeta * prior_lor
+    
+p_zeta = np.trapz(posterior, lR, axis=0)  
+p_lR = np.trapz(posterior, zeta, axis=1) 
+p_zeta /= np.max(p_zeta)
+p_lR /= np.max(p_lR)
+
+fig_3d = plt.figure(figsize=(10, 8))
+ax_3d = fig_3d.add_subplot(111, projection='3d')
+    
+cmap = plt.cm.Greens  
+colors = cmap(np.linspace(0, 1, cmap.N))
+new_colors = colors[50:]
+new_cmap = cm.colors.ListedColormap(new_colors)
+    
+# Grafica 3D
+ax_3d.plot_surface(Z, LR, posterior, cmap=new_cmap, edgecolor='none', rcount=800, ccount=800, alpha=0.5)
+
+# Escalar para que se ajusten al gráfico
+scale_factor = np.max(posterior)
+    
+ax_3d.plot(zeta, np.full_like(zeta, lR_min), p_zeta * scale_factor, color='green', linestyle='dashed', 
+          linewidth=1.5, label=r'$p(\zeta | \tau_d/P)$')
+ax_3d.plot(np.full_like(lR, zetamin), lR, p_lR * scale_factor, color='green', linestyle='dotted', 
+          linewidth=2, label=r'$p(l/R | \tau_d/P)$')
+    
+new_colors = colors[40:] #para quitar los colores mas claros del cmap greens
+new_cmap = cm.colors.ListedColormap(new_colors)
+    
+# Graficar el gráfico 2D en el plano z=0 
+contour = ax_3d.contourf(Z, LR, posterior, cmap=new_cmap, extend="both", zdir='z', offset=0)
+    
+cbar = fig_3d.colorbar(contour, ax=ax_3d, orientation='horizontal', pad=0.01, shrink=0.5)
+cbar.set_label(r"$p(\zeta, l/R | \tau_d/P, M_{AR})$", fontsize=14)
+    
+ax_3d.set_title(r"$\tau_d/P = 1.5$", fontsize=18)
+ax_3d.set_xlabel(r'$\zeta$', fontsize=17)
+ax_3d.set_ylabel(r'$l/R$', fontsize=17, labelpad=8.5)
+ax_3d.set_zlabel(r"$p(\zeta, l/R | \tau_d/P, M_{AR})$", fontsize=17, labelpad=8.5)
+    
+ax_3d.view_init(elev=30, azim=45) #orientación gráfico
+    
+ax_3d.legend()
+
+    
+plt.tight_layout()
+plt.savefig("Posterior3D_orientacion2_1.5.png", dpi=700, bbox_inches='tight', pad_inches=0.4)
+plt.show()
