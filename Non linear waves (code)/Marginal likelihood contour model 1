@@ -1,0 +1,82 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 100
+lR_min, lR_max, nlR = 0.01, 2.0, 100
+zeta = np.linspace(zetamin, zetamax, nzeta)
+lR = np.linspace(lR_min, lR_max, nlR)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+# Cargar datos observacionales 
+data1 = np.loadtxt('data1.txt', skiprows=51, usecols=(-7, -6, -3, -2, -1))
+data2 = np.loadtxt('data.txt', skiprows=103, usecols=(-9, -8, -4, -2, -1))
+
+# Extraer variables
+period1, errperiod1, eta1, dampingtime1, errdtime1 = data1.T
+period2, errperiod2, eta2, dampingtime2, errdtime2 = data2.T
+
+# Concatenar los datos
+period = np.concatenate((period1, period2)) * 60
+dampingtime = np.concatenate((dampingtime1, dampingtime2)) * 60
+eta = np.concatenate((eta1, eta2))
+
+# Definir el rango de valores
+eta_min, eta_max, neta = 0.2, 30, 100
+tau_d_min, tau_d_max, ntau_d = 0.8, 10, 100
+eta_values = np.linspace(eta_min, eta_max, neta)
+tau_d_values = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+ETA, TAU_D = np.meshgrid(eta_values, tau_d_values)
+
+
+def marginal(eta, tau_d):
+    sigma = 0.1 * tau_d
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((tau_d - r1) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_zeta * prior_lor
+    marginal = np.trapz(np.trapz(posterior, lR, axis=0), zeta)
+    return marginal
+
+vectorized_marginal = np.vectorize(marginal)
+marginals_ = vectorized_marginal(ETA, TAU_D)
+
+marginals_ /= np.sum(marginals_)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+contour_levels = np.linspace(0, np.max(marginals_), 8)
+
+contour = ax.contourf(eta_values, tau_d_values, marginals_,levels=contour_levels, cmap="OrRd", extend="both")
+cbar = plt.colorbar(contour, ax=ax)
+
+scatter = ax.scatter(eta, dampingtime / period, edgecolors='black', facecolors='darkorange', label="Datos observacionales")
+
+# Encontrar el contorno donde la probabilidad es 2.3e-5
+contour_level = 2.3e-5
+CS = ax.contour(eta_values, tau_d_values, marginals_, levels=[contour_level], colors='black', linestyles='dotted', linewidths=1.2)
+
+ax.set_title(r"$p(\eta, \tau_d/P |\: M_{AR})$", fontsize=18)
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=17)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=19)
+ax.set_ylim([0.8, 10])
+ax.set_xlim([0.2, 30])
+line = Line2D([0], [0], color='black', linewidth=1.3, linestyle='dotted')  
+ax.legend([line, scatter], [r'$p(\eta, \tau_d/P |\: M_{AR})= 2.3\cdot 10^{-5}$', 'Datos observacionales'], loc='best', fontsize=13)
+
+plt.tight_layout()
+plt.show()
