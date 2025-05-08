@@ -1,0 +1,89 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 300
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 300
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 300
+eta_vals = np.linspace(eta_min, eta_max, neta) 
+
+tau_d_min, tau_d_max, ntau_d = 0.9, 10, 300
+tau_P_vals = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)
+R_grid, zeta_grid = np.meshgrid(R, zeta)
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+def r4(R, zeta, eta):
+    a = eta / R
+    # Cálculo de tau_d / P
+    r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + zeta) / np.sqrt(zeta**2 - 2*zeta + 97))
+    return r4
+
+def marginal(eta, tau_P):
+    tau_P_pred = r4(R_grid, zeta_grid, eta)
+    
+    # Calcular likelihood 
+    sigma = 0.1 * tau_P
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+
+    posterior = likelihood * prior_R * prior_zeta
+    
+    marginal = np.trapz(np.trapz(posterior, R, axis=0), zeta, axis=0)
+    
+    return marginal
+
+vectorized_pd = np.vectorize(marginal)
+marginals_ = vectorized_pd(eta_grid, tau_P_grid)
+
+marginals_ /= np.sum(marginals_)
+
+cmap = plt.cm.OrRd  
+colors = cmap(np.linspace(0, 1, cmap.N))
+new_colors = colors[60:]
+new_cmap = cm.colors.ListedColormap(new_colors)
+
+# Crear figura 3D
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+ 
+ax.plot_surface(eta_grid, tau_P_grid, marginals_, 
+                cmap=new_cmap, edgecolor='none', alpha=0.75, rcount=800, ccount=800)
+
+new_colors = colors[65:] #para quitar los colores mas claros del cmap
+new_cmap = cm.colors.ListedColormap(new_colors)
+
+# Graficar el gráfico 2D en z=0
+contour = ax.contourf(eta_grid, tau_P_grid, marginals_, levels=8, cmap=new_cmap, extend="both", zdir='z', offset=0)
+
+cbar = fig.colorbar(contour, ax=ax, orientation='horizontal', pad=0.01, shrink=0.5)
+cbar.set_label(r"$p(\eta, \tau_d/P |\: M_{NL})$", fontsize=14)
+
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=17)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=17)
+ax.set_zlabel(r"$p(\eta, \tau_d/P |\: M_{NL})$", fontsize=17, labelpad=14.5)
+
+ax.zaxis.set_tick_params(pad=9.5)
+
+ax.view_init(elev=30, azim=235)
+
+plt.tight_layout()
+plt.savefig("Posterior3D_NL_marginal.png", dpi=400, bbox_inches='tight', pad_inches=0.4)
+plt.show()
