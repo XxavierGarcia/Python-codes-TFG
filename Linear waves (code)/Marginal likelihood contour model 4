@@ -1,0 +1,97 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 200
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 200
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 200
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+P_min, P_max, nP = 90, 1280, 200  
+P_values = np.linspace(P_min, P_max, nP)
+
+tau_d_min, tau_d_max, ntau_d = 100, 4000, 200  
+tau_d_values = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+a = eta_values / R_grid
+
+# Cálculo de tau_d / P
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+obs_values = np.linspace(0.01, 10, ntau_d)
+
+marginals_ = np.zeros((ntau_d, nP))
+
+# Bucle sobre tau_d_values y P_values
+for i, tau_d in enumerate(tau_d_values):
+    for j, P in enumerate(P_values):
+        obs_value = tau_d / P  
+        sigma = 0.1 * obs_value
+
+        # Likelihood 
+        like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                    np.exp(-((obs_value - r4) ** 2) / (2 * sigma ** 2))
+                    
+        # Calcular posterior
+        posterior = like1_obs * prior_zeta * prior_R
+        
+        # p(R | r)
+        marginals1 = np.trapz(posterior, R, axis=0)
+        marginals_[i, j] = np.trapz(marginals1, zeta)
+
+marginals_ /= np.sum(marginals_)
+
+# Cargar datos observacionales
+data1 = np.loadtxt('data1.txt', skiprows=51, usecols=(-7, -6, -3, -2, -1))
+data2 = np.loadtxt('data.txt', skiprows=103, usecols=(-9, -8, -4, -2, -1))
+
+# Extraer variables
+period1, errperiod1, eta1, dampingtime1, errdtime1 = data1.T
+period2, errperiod2, eta2, dampingtime2, errdtime2 = data2.T
+
+# Concatenar los datos
+period = np.concatenate((period1, period2)) * 60
+errperiod = np.concatenate((errperiod1, errperiod2)) * 60
+dampingtime = np.concatenate((dampingtime1, dampingtime2)) * 60
+errdtime = np.concatenate((errdtime1, errdtime2)) * 60
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+contour = ax.contourf(P_values, tau_d_values, marginals_, cmap="Oranges", extend="both")
+
+cbar = plt.colorbar(contour, ax=ax)
+
+scatter = ax.scatter(period, dampingtime, edgecolors='black', facecolors='darkorange', label="Datos observacionales")
+
+# Encontrar el contorno donde la probabilidad es 1e-6
+contour_level = 1e-6
+CS = ax.contour(P_values, tau_d_values, marginals_, levels=[contour_level], colors='black', linestyles='dotted', linewidths=1.2)
+
+ax.set_title(r"$p(\tau_d, P |\: M_4)$", fontsize=18)
+ax.set_xlabel('$P$ (s)', fontsize=17)
+ax.set_ylabel(r'$\tau_d$ (s)', fontsize=19)
+ax.set_ylim([100, 3100])
+ax.set_xlim([85, 1280])
+
+line = Line2D([0], [0], color='black', linewidth=1.3, linestyle='dotted')
+ax.legend([line, scatter], [r'$p(\tau_d, P |\: M_4)= 1 \cdot 10^{-6}$', 'Datos observacionales'], loc='best', fontsize=13)
+
+plt.tight_layout()
+plt.show()
