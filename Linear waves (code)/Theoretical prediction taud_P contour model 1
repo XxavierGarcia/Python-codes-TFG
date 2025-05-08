@@ -1,0 +1,30 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 1.1, 1500  
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 0.1, 1500  
+lR = np.linspace(lR_min, lR_max, nlR)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)  
+
+# Cálculo de tau_d / P 
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+plt.figure(figsize=(8, 6))
+c = plt.contourf(Z, LR, r1, 11, cmap='Greens', extend="both")
+plt.xlabel(r'$\zeta$', fontsize=19)
+plt.ylabel(r'$l/R$', fontsize=19)
+plt.title(r'$\tau_d/P$', fontsize=19)
+plt.colorbar(c)
+plt.tight_layout()
+plt.show()
