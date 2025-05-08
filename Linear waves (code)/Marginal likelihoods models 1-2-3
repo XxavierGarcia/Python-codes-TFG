@@ -1,0 +1,103 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+#escoger colores del cmap Set1
+colors = [cm.Set1(1), cm.Set1(2), cm.Set1(0)]  
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 550
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 550
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 100, 1200, 550
+P_values = np.linspace(P_min, P_max, nP)
+
+ntau_d = 550
+obs_values = np.linspace(0.01, 10, ntau_d)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+sigma = 0.1 * obs_values[:, None, None]
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None, None] - r1) ** 2) / (2 * sigma ** 2))
+posterior = like1_obs * prior_zeta * prior_lor
+marginals_ = np.trapz(posterior, lR, axis=1)
+marginals_ = np.trapz(marginals_, zeta, axis=1)
+
+plt.figure(figsize=(8, 6))
+plt.plot(obs_values, marginals_, color=colors[0], label="Amortiguamiento resonante")  # Color de Set2
+plt.xlabel("$r_1$", fontsize=17)
+plt.ylabel(r"$p(\tau_d/P |\: r_1)$", fontsize=18)
+plt.tight_layout()
+
+# Modelo 2: Mezcla de fases
+
+# Definición de parámetros
+wmin, wmax, nw = 0.5, 20, 450
+w = np.linspace(wmin, wmax, nw)
+nu = 4 * 10 ** (-3)
+
+P = [150, 500, 1250]
+
+for i, p in enumerate(P):
+    # Cálculo de tau_d / P
+    r2 = (3 / (np.pi ** 2 * nu)) ** (1/3) * w ** (2/3) * p ** (-1/3)
+    # Priors uniformes para w
+    prior_w = 1 / (wmax - wmin)
+
+    sigma = 0.1 * obs_values[:, None]
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None] - r2) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_w
+    marginals_ = np.trapz(posterior, w)
+
+    label = "Mezcla de fases" if i == 0 else None
+    plt.plot(obs_values, marginals_, color=colors[1], label=label)  # Color de Set2
+    plt.xlabel("$r_2$", fontsize=18)
+    plt.ylabel(r"$p(\tau_d/P |\: r_2)$", fontsize=18)
+    plt.tight_layout()
+    
+    max_idx = np.argmax(marginals_)
+    x_text = obs_values[max_idx]
+    y_text = marginals_[max_idx]
+    plt.text(x_text, y_text + 0.025, f"$P = {p}\:s$", fontsize=12, color="green")
+    
+    
+# Modelo 3: Fuga de ondas
+
+# Definición de parámetros
+rlmin, rlmax, nrl = 0.0001, 0.3, 450
+rl = np.linspace(rlmin, rlmax, nrl)
+
+# Cálculo de tau_d / P
+r3 = (4 / (np.pi ** 4)) * rl ** (-2)
+
+# Priors uniformes para L/R
+prior_rl = 1 / (rlmax - rlmin)
+
+sigma = 0.1 * obs_values[:, None]
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None] - r3) ** 2) / (2 * sigma ** 2))
+posterior = like1_obs * prior_rl
+marginals_ = np.trapz(posterior, rl)
+
+plt.plot(obs_values, marginals_, color=colors[2], label="Fuga de ondas")  # Color de Set2
+plt.xlabel(r"$\tau_d/P$", fontsize=18)
+plt.ylabel(r"$p(\tau_d/P |\: M)$", fontsize=18)
+plt.tight_layout()
+plt.legend(fontsize=14)
+plt.show()
