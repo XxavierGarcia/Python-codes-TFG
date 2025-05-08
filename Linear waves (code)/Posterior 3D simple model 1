@@ -1,0 +1,66 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+# Modelo 1: Amortiguamiento resonante
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 1000
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 1000
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 100, 1200, 1000
+P_values = np.linspace(P_min, P_max, nP) 
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)  
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi)**2 * (1 / LR) * ((Z + 1) / (Z - 1))
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Valores observacionales 
+obs_values = np.array([1.5, 3, 10])  
+sigma = 0.4 * obs_values
+
+# Cálculo y visualización del posterior en 3D y 2D 
+for i, obs_value in enumerate(obs_values):
+    
+    # Cálculo de la likelihood 
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma[i])) * \
+                np.exp(-((obs_value - r1)**2) / (2 * sigma[i]**2))
+    
+    # Cálculo del posterior
+    posterior = like1_obs * prior_zeta * prior_lor
+    
+
+    fig_3d = plt.figure(figsize=(10, 8))
+    ax_3d = fig_3d.add_subplot(111, projection='3d')
+    
+    cmap = plt.cm.Greens  
+    colors = cmap(np.linspace(0, 1, cmap.N))
+    new_colors = colors[75:]
+    new_cmap = cm.colors.ListedColormap(new_colors)
+    
+    # Graficar la superficie 3D
+    ax_3d.plot_surface(Z, LR, posterior, cmap=new_cmap, edgecolor='none', rcount=1000, 
+                       ccount=1000, alpha=0.5)
+    
+    
+    ax_3d.set_title(fr"$\tau_d/P = {obs_value}$", fontsize=18)
+    ax_3d.set_xlabel(r'$\zeta$', fontsize=17)
+    ax_3d.set_ylabel('$l/R$', fontsize=17, labelpad=8.5)
+    ax_3d.set_zlabel(r"$p(\zeta, l/R | \tau_d/P, M_{AR})$", fontsize=17, labelpad=8.5)
+    
+    
+    plt.tight_layout()
+    plt.savefig(f"Posterior3D_{obs_value}_basic.png", dpi=400, bbox_inches='tight', pad_inches=0.4)
+    plt.show()
