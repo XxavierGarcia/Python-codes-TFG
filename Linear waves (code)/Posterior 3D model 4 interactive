@@ -1,0 +1,55 @@
+import numpy as np
+import plotly.graph_objects as go
+import plotly.io as pio
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 500
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 500
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 500
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+a = eta_values / R_grid
+
+# Cálculo de tau_d / P
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+# Observaciones tau_d/P
+obs_value = 1.5
+sigma = 0.4*obs_value
+
+# Calcular likelihood y posterior 
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+    np.exp(-((obs_value - r4)**2) / (2 * sigma**2))
+    
+posterior = like1_obs * prior_zeta * prior_R
+
+# Gráfico 3D interactivo 
+fig = go.Figure(data=[go.Surface(z=posterior, x=zeta, y=R, colorscale='OrRd')])
+
+fig.update_layout(
+    title=r"σ=0.4",
+    scene=dict(
+            xaxis_title=r'ζ',
+            yaxis_title=r'R',
+            zaxis_title=r"p(ζ, R | τd/P, M4)"
+        )
+    )
+
+# Guardar y abrir en el navegador
+html_file = f"posterior_M4_{obs_value}.html"
+pio.write_html(fig, html_file, auto_open=True)
+
+ 
