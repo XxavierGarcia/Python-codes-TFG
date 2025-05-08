@@ -1,0 +1,55 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 550
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 550
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 100, 1200, 550
+P_values = np.linspace(P_min, P_max, nP)
+
+ntau_d = 550
+obs_values = np.linspace(0.01, 10, ntau_d)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+# Valores de la incertidumbre
+sigma_vals = [0.1, 0.3, 0.5]
+colors = cm.Set1(1)
+
+plt.figure(figsize=(8, 6))
+
+line_styles = ['-','--',':'] 
+
+for i, sigma_val in enumerate(sigma_vals):
+    sigma = sigma_val * obs_values[:, None, None]
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None, None] - r1) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_zeta * prior_lor
+    marginals_ = np.trapz(posterior, lR)
+    marginals_ = np.trapz(marginals_, zeta)
+
+    plt.plot(obs_values, marginals_, linestyle=line_styles[i], color=colors, label=fr"$\sigma = {int(sigma_val * 100)}\%$")
+
+plt.xlabel(r"$\tau_d/P$", fontsize=17)
+plt.ylabel(r"$p(\tau_d/P |\: M_{AR})$", fontsize=18)
+plt.legend(fontsize=15)
+plt.tight_layout()
+plt.show()
+
