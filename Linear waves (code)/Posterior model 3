@@ -1,0 +1,60 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 3: Fuga de ondas
+
+# Definición de parámetros
+rlmin, rlmax, nrl = 0.0001, 0.3, 8500  
+rl = np.linspace(rlmin, rlmax, nrl)
+
+Pmin, Pmax, nP = 100, 1200, 8500
+P_values = np.linspace(Pmin, Pmax, nP)
+
+# Cálculo de tau_d / P
+r3 = (4 / (np.pi**4)) * rl**(-2)  
+tau_d = (4 / (np.pi**4)) * rl**(-2) * P_values
+
+# Gráfico de tau_d/P vs R/L
+plt.figure(figsize=(8, 6))
+plt.plot(rl, r3, color='green', alpha=0.5)
+plt.xlabel('$R/L$', fontsize=17)
+plt.ylabel(r'$\tau_d/P$', fontsize=18)
+plt.xlim([0, 0.005])
+plt.ylim([-100000, 4.3e6])
+plt.show()
+
+# Prior uniforme para L/R
+prior_rl = 1 / (rlmax - rlmin)
+
+# Valores observacionales 
+obs_values = np.array([1.5, 3, 10])  
+sigma = 0.1 * obs_values
+
+posteriors_rl = []
+
+for i, obs_value in enumerate(obs_values):
+    like3_obs = (1 / (np.sqrt(2 * np.pi) * sigma[i])) * \
+                np.exp(-((obs_value - r3)**2) / (2 * sigma[i]**2))
+    posterior = like3_obs * prior_rl 
+    posterior /= np.trapz(posterior, rl)
+    posteriors_rl.append(posterior)
+
+color_map = cm.Set2
+
+# Gráfico de p(R/L | r)
+plt.figure(figsize=(8, 6))
+
+for i, obs_value in enumerate(obs_values):
+    plt.plot(rl, posteriors_rl[i], label=fr"$\tau_d/P = {obs_value}$", 
+             linewidth=1.5, color=color_map(i / (len(obs_values) - 1)))
+plt.xlabel("$R/L$", fontsize=17)
+plt.ylabel(r"$p(R/L |\:\tau_d/P,\: M_{FO})$", fontsize=18)
+plt.xlim([-0.01, 0.31])
+plt.tight_layout()
+plt.legend(fontsize=16, frameon=False, loc='best')
+plt.show()
