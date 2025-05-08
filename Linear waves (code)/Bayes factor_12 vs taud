@@ -1,0 +1,100 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+
+# Definición de parámetros
+wmin, wmax, nw = 0.5, 20, 400
+w = np.linspace(wmin, wmax, nw)
+
+nu = 4 * 10**(-3)
+
+zetamin, zetamax, nzeta = 1.01, 10.0, 400
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.0001, 2.0, 400
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 150, 1250, 400
+P_values = np.linspace(P_min, P_max, nP)
+
+P_fixed = 150
+
+tau_d_min, tau_d_max, ntau_d = 0.01, 10, 400
+obs_values = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR, indexing='ij')
+
+# Modelo 1: Amortiguamiento resonante
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / (LR)) * ((Z + 1) / (Z - 1))
+
+# Modelo 2: Mezcla de fases
+
+# Cálculo de tau_d / P
+r2 = (3 / (np.pi**2 * nu))**(1/3) * (w**(2/3)) * (P_fixed**(-1/3))
+
+# Priors uniformes para zeta, w y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+prior_w = 1 / (wmax - wmin)
+
+sigma = 0.1 * obs_values[:, None, None]
+
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None, None] - r1) ** 2) / (2 * sigma ** 2))
+posterior1 = like1_obs * prior_zeta * prior_lor
+marginals1 = np.trapz(posterior1, lR)
+marginals_ = np.trapz(marginals1, zeta)
+
+
+sigma_2 = 0.1 * obs_values[:, None]
+
+like2_obs = (1 / (np.sqrt(2 * np.pi) * sigma_2)) * np.exp(-((obs_values[:, None] - r2) ** 2) / (2 * sigma_2 ** 2))
+posterior2 = like2_obs * prior_w
+marginals_2 = np.trapz(posterior2, w)
+
+bf21 = 2 * np.log(marginals_2 / marginals_)
+bf12 = 2 * np.log(marginals_ / marginals_2)
+
+
+
+plt.plot(obs_values, bf12, linewidth=1.5, color='black')
+plt.plot(obs_values, bf21, linewidth=1.5, color='black', linestyle='dashed')
+
+plt.fill_between(obs_values, -30, 30, where=(2 <= bf12) & (bf12 < 6), color='lightgreen', alpha=0.35)
+plt.fill_between(obs_values, -30, 30, where=(6 <= bf12) & (bf12 < 10), color='limegreen', alpha=0.4)
+plt.fill_between(obs_values, -30, 30, where=(bf12 >= 10), color='forestgreen', alpha=0.6)
+
+plt.fill_between(obs_values, -30, 30, where=(2 <= bf21) & (bf21 < 6), color='lightgreen', alpha=0.35)
+plt.fill_between(obs_values, -30, 30, where=(6 <= bf21) & (bf21 < 10), color='limegreen', alpha=0.4)
+plt.fill_between(obs_values, -30, 30, where=(bf21 >= 10), color='forestgreen', alpha=0.6)
+
+plt.text(4.6, -7, r"$BF_{ARMF}$", fontsize=12, color='black', rotation=0)  
+plt.text(4.6, 5.7, r"$BF_{MFAR}$", fontsize=12, color='black', rotation=0)
+
+plt.text(7.85, 21, "$EP$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(8.65, 21, "$EF$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(9.5, 21, "$EMF$", fontsize=10.85, ha='center', color='black', rotation=0) 
+plt.text(6.99, 21, "$EAM$", fontsize=11, ha='center', color='black', rotation=0)
+
+plt.text(7.85, 18, "$M_{AR}$", fontsize=10.5, ha='center', color='black', rotation=0)  
+plt.text(8.65, 18, "$M_{AR}$", fontsize=10.5, ha='center', color='black', rotation=0)  
+plt.text(9.5, 18, "$M_{AR}$", fontsize=10.5, ha='center', color='black', rotation=0) 
+plt.text(4.78, 18, "$M_{MF}$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(0.85, 18, "$M_{AR}$", fontsize=9.5, ha='center', color='black', rotation=0)  
+
+plt.text(4.78, 21, "$EP$", fontsize=11, ha='center', color='black', rotation=0)  
+plt.text(2.05, 21, "$EAM$", fontsize=11, ha='center', color='black', rotation=0)
+plt.text(0.83, 21, "$EP$", fontsize=10.85, ha='center', color='black', rotation=0)   
+
+
+plt.xlabel(r"$\tau_d/P$", fontsize=14)
+plt.ylabel(r"$2\ln(\mathrm{BF_{M_1M_2}})$", fontsize=14)
+plt.ylim(-25, 25)
+plt.xlim([0, 10])
+plt.xticks(np.arange(0, 11, 1)) 
+plt.show()
