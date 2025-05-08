@@ -1,0 +1,103 @@
+Title: Catalogue of decaying kink oscillations of coronal loops in the 24th 
+       solar cycle 
+Authors: Nechaeva A., Zimovets I.V., Nakariakov V.M., Goddard C.R. 
+Table: Parameters of 223 decaying kink oscillations of coronal loops detected 
+    with SDO/AIA at 171A in 2010-2018
+================================================================================
+Byte-by-byte Description of file: apjsab0e86t1_mrt.txt
+--------------------------------------------------------------------------------
+   Bytes Format Units    Label   Explanations
+--------------------------------------------------------------------------------
+   1-  1 I1     ---      Subset  Subset (1)
+   3-  4 I2     ---      Event   Event number
+   6-  7 I2     ---      Loop    Loop number in the Event
+   9- 10 A2     ---      LC      Loop Class (2)
+  12- 16 I5     arcsec   X1      Slit position, X1, arcsec
+  18- 22 I5     arcsec   X2      Slit position, X2, arcsec
+  24- 27 I4     arcsec   Y1      Slit position, Y1, arcsec
+  29- 32 I4     arcsec   Y2      Slit position, Y2, arcsec
+  34- 37 I4     yr       Obs.Y   Event starting date/time, Year
+  39- 41 A3     ---      Obs.M   Event starting date/time, Month
+  43- 44 I2     d        Obs.D   Event starting date/time, Day
+  46- 47 I2     h        Obs.h   Event starting date/time, hour, UT
+  49- 50 I2     min      Obs.m   Event starting date/time, minute, UT
+  52- 53 I2     s        Obs.s   Event starting date/time, second, UT
+  55- 74 A20    ---      Flare   GOES Flare identifier
+  76- 80 F5.2   min      Per     Oscillation period, minutes
+  82- 85 F4.2   min    e_Per     Uncertainty in Per
+  87- 89 I3     Mm       Len     Loop length, 10+6 meters
+  91- 92 I2     Mm     e_Len     ?="" Uncertainty in Len
+  94- 97 F4.1   Mm       Dis     Initial Displacement, 10+6 meters
+  99-102 F4.1   Mm       Amp     Oscillation amplitude, 10+6 meters
+ 104-106 F3.1   Mm     e_Amp     ?="" Uncertainty in Amp
+ 108-112 F5.2   min      Dtime   ?="" Damping time, minutes
+ 114-118 F5.2   min    e_Dtime   ?="" Uncertainty in Dtime
+--------------------------------------------------------------------------------
+Note (1): Subset=1 of the catalog is taken from Goddard &amp; Nakariakov (2016A&amp;A...590L...5G). 
+Note (2): The loop class is described by a letter and number, which specify
+    the type (S,B,C) and data quality (1,2,3). The type and quality values 
+    are --
+    S = Segment, where we can clearly see a part of loop not interfering with other loops; 
+    B = Bundle, where there are several parallel loops; 
+    C = Crossing, where there are several other loops crossing the analysed loop.
+    1 = A clearly observed oscillation of a loop or bundle with a clearly defined 
+        edge and/or center, the data is considered promising for future study 
+        such as seismological applications;
+    2 = lower quality data, where part of the oscillation or structure is obscured 
+        and/or the data is noisy, but may still provide useful information for 
+        future study;
+    3 = low quality data, where any measurement beyond a period estimate is
+        very subjective.
+--------------------------------------------------------------------------------
+1  1  1 S2  -940  -964 -321 -308 2010 Aug 02 04 22 49 SOL2010-08-02T04:20   3.42 0.06 232     5.1  1.7      5.34  1.12 
+1  1  2 B2  -962  -997 -313 -322 2010 Aug 02 04 22 13 SOL2010-08-02T04:20   4.11 0.05  78     7.0  1.2     10.76  2.79 
+1  3  1 S1  -977  -988 -383 -368 2010 Nov 03 12 13 48 SOL2010-11-03T12:12   2.46 0.03 213     1.4  4.7      8.8   1.8  
+1  3  2 S2  -970 -1001 -416 -393 2010 Nov 03 12 14 35 SOL2010-11-03T12:12   3.62 0.08 262     4.4  9.7      4.12  0.47 
+1  4  1 S1   912   889  405  433 2011 Feb 09 01 30 02 SOL2011-02-09T01:26   2.29 0.03 183     2.9  4.4      7.18  1.5  
+1  4  2 X3   969   974  231  278 2011 Feb 09 01 31 54 SOL2011-02-09T01:26   3.47 0.03 181     1.4  1.2      7.44  1.   
+1  7  1 B2   983   970  330  342 2011 Feb 10 06 57 46 SOL2011-02-10T06:55   1.69 0.02 162     2.9  3.2      7.23  1.3  
+1  8  1 B3  1007  1021  280  305 2011 Feb 10 12 35 01 SOL2011-02-10T12:29   3.74 0.07 207     1.2  1.6     10.    1.   
+1  9  1 B3   983   947  348  414 2011 Feb 10 13 43 37 SOL2011-02-10T13:33   5.14 0.17 264     3.0  4.3      5.09  0.98 
+1  9  2 S3   942   934  431  461 2011 Feb 10 13 46 31 SOL2011-02-10T13:33   8.95 0.14 326     3.6  3.2     11.83  4.76 
+1 10  1 X3  1106  1133  168  214 2011 Feb 11 08 07 07 SOL2011-02-11T07:57  11.46 0.17 397     4.7  8.9      8.02  1.09 
+1 11  3 B1   -64   -69 -334 -316 2011 Feb 13 17 37 13 SOL2011-02-11T17:30   2.6  0.05 118     3.1  3.7      8.84  1.5  
+1 14  2 X3   988  1026  229  229 2011 Aug 11 10 10 22 SOL2011-08-11T10:10   2.35 0.07 146    17.4  3.2      2.69  0.64 
+1 15  1 B2   231   216  215  263 2011 Sep 06 22 20 15 SOL2011-09-06T22:12   2.07 0.04 153     9.5  3.4      9.99  4.59 
+1 16  2 B3  -911  -884  457  476 2011 Sep 22 10 26 59 SOL2011-09-22T10:28   9.52 0.11 284     1.4  1.7     12.2   3.47 
+1 17  2 B2  -938  -992  -31  -12 2011 Sep 23 23 51 57 SOL2011-09-23T23:48  11.27 0.12 348     7.5 10.0     16.55  1.44 
+1 18  1 B3  -676  -682  -12   62 2011 Nov 14 07 21 12 SOL2011-11-14T07:17   5.36 0.23 253     2.6  3.7     16.19  7.67 
+1 21  1 B3   827   813  662  699 2011 Nov 17 22 28 37 SOL2011-11-17T22:27  15.36 0.4  365     6.4  4.3     19.19  1.55 
+1 22  1 B2  -881  -910 -588 -549 2011 Nov 18 07 34 59 SOL2011-11-18T07:32  17.86 0.3  432    14.5 15.6     27.43  4.26 
+1 22  3 B3  -814  -894 -673 -645 2011 Nov 18 07 36 02 SOL2011-11-18T07:32  20.46 0.58 538    31.8 26.6     35.01  6.44 
+1 23  1 B3   316   321 -221 -195 2011 Dec 22 01 59 34 SOL2011-12-22T01:51   5.13 0.11 156     2.0  3.0      8.    5.   
+1 24  1 B2  1098  1126   13   51 2012 Jan 16 00 08 28 SOL2012-01-15T23:56  11.95 0.13 473     2.5  9.2     18.71  4.5  
+1 26  1 B2  -633  -628  339  380 2012 May 08 13 05 46 SOL2012-05-08T13:03   3.71 0.05 154     7.4  5.3      7.83  0.62 
+1 27  1 S1   964   945  289  325 2012 May 26 20 36 47 SOL2012-05-26T20:09   7.67 0.04 162    19.6  9.4     24.22  2.02 
+1 27  2 X2   944   944  259  284 2012 May 26 20 36 27 SOL2012-05-26T20:09   9.59 0.09 138    13.0  9.1     17.57  2.35 
+1 28  1 S1  -973  -988 -366 -342 2012 May 30 08 58 57 SOL2012-05-30T08:35   4.28 0.02 234     2.2  8.8     15.55  1.22 
+1 28  2 B2  -972  -989 -388 -370 2012 May 30 08 56 52 SOL2012-05-30T08:35   3.38 0.02 233     4.0  5.3     19.11  4.85 
+1 30  1 B3 -1053 -1076 -142 -129 2012 Aug 07 00 59 34 SOL2012-08-07T00:55   9.95 0.27 333    15.4  7.4     16.7   1.03 
+1 34  2 B3 -1061 -1065 -201 -174 2012 Oct 19 19 01 44 SOL2012-10-19T18:44   5.2  0.08 270     3.0  2.1     15.23  5.5  
+1 36  2 S1 -1077 -1065 -121  -96 2012 Oct 20 18 09 33 SOL2012-10-20T18:05   5.61 0.03 347     9.6  4.4     24.83  3.41 
+1 36  4 B2 -1045 -1020 -114 -110 2012 Oct 20 18 10 08 SOL2012-10-20T18:05   5.53 0.04 258     3.6  2.5      7.32  1.08 
+1 36  7 B2 -1107 -1094 -153 -121 2012 Oct 20 18 11 11 SOL2012-10-20T18:05   5.72 0.06 353     3.1  3.4     14.17  2.73 
+1 36  8 B2 -1036 -1066 -217 -194 2012 Oct 20 18 08 39 SOL2012-10-20T18:05   4.33 0.08 238    10.3 12.1      9.01  2.16 
+1 36  9 B3 -1109 -1117 -438 -399 2012 Oct 20 18 11 45 SOL2012-10-20T18:05   6.18 0.05 473    12.5 13.7     13.15  2.66 
+1 37  1 B2   933    94  615 8615 2013 Jan 07 06 37 38 SOL2013-01-06T06:34   7.14 0.07 363     8.0 16.3      7.53  1.45 
+1 37  2 S2   874   890  598  613 2013 Jan 07 06 37 50 SOL2013-01-06T06:34   3.6  0.03 241     9.7  3.1      9.44  0.92 
+1 37  3 B2   828   816  659  708 2013 Jan 07 06 39 19 SOL2013-01-06T06:34   8.35 0.08 368     2.1 12.7     15.04  1.81 
+1 37  5 B3   801   812  608  631 2013 Jan 07 06 37 11 SOL2013-01-06T06:34   4.5  0.02 260     1.3  2.2     14.    2.   
+1 38  1 B2   829   820  644  687 2013 Jan 07 08 48 37 SOL2013-01-06T08:45   7.23 0.06 295     2.8 12.3     15.75  3.09 
+1 38  2 S3   979   940  637  676 2013 Jan 07 08 48 17 SOL2013-01-06T08:45   9.78 0.19 512    15.8 13.4     14.62  4.96 
+1 38  3 B3   886   936  644  622 2013 Jan 07 08 47 19 SOL2013-01-06T08:45   6.95 0.14 352    17.2  4.8      9.    3.   
+1 39  1 B3  -396  -409  367  379 2013 Feb 17 15 45 42 SOL2013-02-17T15:45   2.48 0.04  92     0.7  3.1      7.82  1.66 
+1 42  1 B2 -1076 -1044   77  111 2013 Jul 18 17 59 56 SOL2013-07-18T17:48  15.28 0.16 540    12.3 22.0     21.98 15.6  
+1 42  2 B1 -1134 -1069   36   99 2013 Jul 18 17 59 01 SOL2013-07-18T17:48  15.76 0.12 588    25.4 27.4     26.64  2.17 
+1 42  3 B2 -1153 -1102   41  112 2013 Jul 18 17 58 34 SOL2013-07-18T17:48  16.08 0.21 597    19.9 23.7     15.76  3.09 
+1 43  4 S3 -1044 -1082  409  429 2013 Oct 11 07 13 30 SOL2013-10-11T07:09  10.45 0.17 386    17.9  8.0     15.38  2.58 
+1 43  5 B3 -1020 -1071  -76  -51 2013 Oct 11 07 15 51 SOL2013-10-11T07:09   8.03 0.18 191    10.4 13.0      9.37  1.22 
+1 46  5 B3  1076  1091   -6    1 2014 Feb 10 20 59 10                       4.8  0.1  257     3.6  2.9     19.72  3.23 
+1 48  1 B2  1124  1186   -8    1 2014 Feb 11 13 28 08 SOL2014-02-11T13:25   9.07 0.14 403     9.3  7.8     20.71  4.71 
+1 48  2 B2  1068   130 -391   -6 2014 Feb 11 13 28 13 SOL2014-02-11T13:25  11.88 0.13 314    17.8 27.6     19.62  2.96 
+1 48  5 B1  1026  1004  332  354 2014 Feb 11 13 28 38 SOL2014-02-11T13:25  13.5  0.16 431     6.9 10.7     24.17  5.13 
+1 48  7 B2  1068  1023  427  456 2014 Feb 11 13 31 32 SOL2014-02-11T13:25  14.16 0.55 457     4.9 15.0     13.64  3.93 
