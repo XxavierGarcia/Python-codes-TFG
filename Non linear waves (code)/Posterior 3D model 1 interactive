@@ -1,0 +1,59 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.io as pio
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 100
+lR_min, lR_max, nlR = 0.01, 2.0, 100
+
+zeta = np.linspace(zetamin, zetamax, nzeta)
+lR = np.linspace(lR_min, lR_max, nlR)
+eta_vals = np.linspace(0.2, 30, 100)
+tau_P_vals = np.linspace(0.9, 10, 100)
+
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)
+Z, LR = np.meshgrid(zeta, lR, indexing='ij')
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+def r1(Z, LR):
+    return (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+def marginal(eta, tau_P):
+    tau_P_pred = r1(Z, LR)
+    sigma = 0.1 * tau_P
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+    posterior = likelihood * prior_lor * prior_zeta
+    marginal = np.trapz(np.trapz(posterior, lR, axis=1), zeta, axis=0)
+    return marginal
+
+vectorized_pd = np.vectorize(marginal)
+marginals_ = vectorized_pd(eta_grid, tau_P_grid)
+marginals_ /= np.sum(marginals_)
+
+
+# Gráfico 3D interactivo 
+fig = go.Figure(data=[go.Surface(z=marginals_, x=eta_vals, y=tau_P_vals, colorscale='OrRd')])
+
+fig.update_layout(
+    title=r"σ=10%",
+    scene=dict(
+            xaxis_title=r'η (Mm)',
+            yaxis_title=r'τd/P',
+            zaxis_title=r"p(η, τd/P | M_AR)"
+        )
+    )
+
+# Guardar y abrir en el navegador
+html_file = "Marginal_likelihood_M_AR_3D.html"
+pio.write_html(fig, html_file, auto_open=True)
+
