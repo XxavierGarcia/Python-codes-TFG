@@ -1,0 +1,111 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 700
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 700
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 700
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+
+# Modelo 4: Amortiguamiento no lineal
+
+eta_values=9.5
+
+# Cálculo de tau_d / P
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * eta_values / R_grid)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+# Valores observacionales
+obs_values = np.array([1.5, 3, 10])  
+sigma = 0.1 * obs_values 
+
+marginals_zeta = []
+marginals_eta = []
+
+# Cálculo de las distribuciones marginales
+for i, obs_value in enumerate(obs_values):
+    
+    # Cálculo de la likelihood para el modelo
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma[i])) * \
+                np.exp(-((obs_value - r4)**2) / (2 * sigma[i]**2))
+    
+    # Cálculo del posterior
+    posterior = like1_obs * prior_zeta * prior_R
+
+    # Cálculo de la distribución marginal p(zeta | r)
+    marginal_zeta = np.trapz(posterior, R, axis=0)
+    marginal_zeta /= np.trapz(marginal_zeta, zeta)  
+    marginals_zeta.append(marginal_zeta)
+    
+    # Cálculo de la distribución marginal p(R | r)
+    marginal_eta = np.trapz(posterior, zeta, axis=1)
+    marginal_eta /= np.trapz(marginal_eta, R)  
+    marginals_eta.append(marginal_eta)  
+    
+color_map = cm.Set1
+    
+
+plt.figure(figsize=(8, 6))
+
+for i, obs_value in enumerate(obs_values):
+    plt.plot(zeta, marginals_zeta[i], label=fr"$\tau_d/P = {obs_value}$", 
+              linewidth=1.5, color=color_map(i / (len(obs_values) - 1)))
+plt.xlabel(r"$\zeta$", fontsize=17)
+plt.ylabel(r"$p(\zeta |\:\tau_d/P,\: M_{NL})$", fontsize=18)
+plt.xlim([0, 9.6])
+plt.xticks(np.arange(0, zetamax + 1, 1))  
+plt.tight_layout()
+plt.legend(fontsize=16, frameon=False, loc='best')
+plt.show()
+
+plt.figure(figsize=(8, 6))
+for i, obs_value in enumerate(obs_values):
+    plt.plot(R, marginals_eta[i], label=fr"$\tau_d/P = {obs_value}$", 
+             linewidth=1.5, color=color_map(i / (len(obs_values) - 1)))
+plt.xlabel(r"$R$", fontsize=17)
+plt.ylabel(r"$p(R |\:\tau_d/P,\: M_{NL})$", fontsize=18)
+plt.xlim([0.4, 5.1])
+plt.tight_layout()
+plt.legend(fontsize=16, frameon=False, loc='best')
+plt.show()
+
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+a = eta_values / R_grid
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+sigma = 0.3 * obs_values 
+
+for i, obs_value in enumerate(obs_values):
+    
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma[i])) * \
+                np.exp(-((obs_value - r4)**2) / (2 * sigma[i]**2))
+    
+    # Cálculo del posterior
+    posterior = like1_obs * prior_zeta * prior_R
+                
+    fig_2d, ax_2d = plt.subplots(figsize=(8, 6))
+    contour = ax_2d.contourf(Z, R_grid, posterior,cmap="OrRd",extend="both")
+    cbar = plt.colorbar(contour, ax=ax_2d)
+    ax_2d.set_title(fr"$p(\zeta, R |\:\tau_d/P = {obs_value},\: M_{{NL}})$", fontsize=18)
+    ax_2d.set_xlabel(r'$\zeta$', fontsize=16)
+    ax_2d.set_ylabel('$R$', fontsize=16)
+    ax_2d.set_xlim([1, zetamax])
+    plt.tight_layout()
+    plt.show()
