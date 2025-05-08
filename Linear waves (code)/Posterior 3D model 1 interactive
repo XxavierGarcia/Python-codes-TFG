@@ -1,0 +1,50 @@
+import numpy as np
+import plotly.graph_objects as go
+import plotly.io as pio
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 700
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 700
+lor = np.linspace(lR_min, lR_max, nlR)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lor)
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi)**2 * (1 / LR) * ((Z + 1) / (Z - 1))  
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Observaciones tau_d/P
+obs_value = 1.5
+sigma = 0.4*obs_value
+
+# Calcular likelihood y posterior 
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+    np.exp(-((obs_value - r1)**2) / (2 * sigma**2))
+    
+posterior = like1_obs * prior_zeta * prior_lor
+
+# Gráfico 3D interactivo 
+fig = go.Figure(data=[go.Surface(z=posterior, x=zeta, y=lor, colorscale='greens')])
+
+fig.update_layout(
+    title=r"τd/P = 1.5, σ=40%",
+    scene=dict(
+            xaxis_title=r'ζ',
+            yaxis_title=r'l/R',
+            zaxis_title=r"p(ζ, l/R | τd/P, M_AR)"
+        )
+    )
+
+# Guardar y abrir en el navegador
+html_file = fr"Posterior_{obs_value}_M_AR_3D.html"
+pio.write_html(fig, html_file, auto_open=True)
+
+ 
