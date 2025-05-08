@@ -1,0 +1,89 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 250
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 250
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 250
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+a = eta_values / R_grid
+
+# Cálculo de tau_d / P
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+# Valores observacionales 
+obs_values = np.array([1.5, 3, 10])  
+sigma = 0.4 * obs_values
+
+# Cálculo y visualización del posterior en 3D y 2D 
+for i, obs_value in enumerate(obs_values):
+    
+    # Cálculo de la likelihood para el modelo
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma[i])) * \
+                np.exp(-((obs_value - r4)**2) / (2 * sigma[i]**2))
+    
+    # Cálculo del posterior
+    posterior = like1_obs * prior_zeta * prior_R
+    
+    p_zeta = np.trapz(posterior, R,axis=0)  
+    p_R = np.trapz(posterior, zeta,axis=1) 
+    p_zeta /= np.max(p_zeta)
+    p_R /= np.max(p_R)
+
+    fig_3d = plt.figure(figsize=(10, 8))
+    ax_3d = fig_3d.add_subplot(111, projection='3d')
+    
+    cmap = plt.cm.OrRd   
+    colors = cmap(np.linspace(0, 1, cmap.N))
+    new_colors = colors[50:]
+    new_cmap = cm.colors.ListedColormap(new_colors)
+    
+    # Graficar la superficie 3D
+    ax_3d.plot_surface(Z, R_grid, posterior, cmap=new_cmap, edgecolor='none', rcount=300, 
+                       ccount=300, alpha=0.5)
+    
+    # Escalar para que se ajusten al gráfico
+    scale_factor = np.max(posterior)
+    
+    ax_3d.plot(zeta, np.full_like(zeta, Rmax), p_zeta * scale_factor, color='darkorange', linestyle='dashed', linewidth=1.5, label=r'$p(\zeta | \tau_d/P)$')
+    ax_3d.plot(np.full_like(R, zetamin), R, p_R * scale_factor, color='darkorange', linestyle='dotted', linewidth=2, label=r'$p(R | \tau_d/P)$')
+    
+    new_colors = colors[40:] #para quitar los colores mas claros del cmap
+    new_cmap = cm.colors.ListedColormap(new_colors)
+    
+
+    # Graficar el gráfico 2D en z=0 
+    contour = ax_3d.contourf(Z, R_grid, posterior, cmap=new_cmap, extend="both", zdir='z', offset=0)
+    
+    cbar = fig_3d.colorbar(contour, ax=ax_3d, orientation='horizontal', pad=0.01, shrink=0.5)
+    cbar.set_label(r"$p(\zeta, R | \tau_d/P, M_4)$", fontsize=14)
+    
+    ax_3d.set_title(fr"$\tau_d/P = {obs_value}$", fontsize=18)
+    ax_3d.set_xlabel(r'$\zeta$', fontsize=17)
+    ax_3d.set_ylabel('$R$', fontsize=17)
+    ax_3d.set_zlabel(r"$p(\zeta, R | \tau_d/P, M_4)$", fontsize=17, labelpad=8.5)
+    
+    ax_3d.legend()
+    
+    plt.tight_layout()
+    plt.savefig(f"Posterior3D_nolineal__{obs_value}.png", dpi=400, bbox_inches='tight', pad_inches=0.4)
+    plt.show()
