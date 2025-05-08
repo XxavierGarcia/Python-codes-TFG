@@ -1,0 +1,51 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 350
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 350
+R = np.linspace(Rmin, Rmax, nR)
+
+ntau_d =350
+obs_values = np.linspace(0.5, 10, ntau_d)
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+eta_values = [1,10,30]
+
+colors = cm.Set1(3)
+
+plt.figure(figsize=(8, 6))
+
+line_styles = [':','--','-']
+
+for i, e in enumerate(eta_values):
+    # Cálculo de tau_d / P
+    r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * e / R_grid)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+    # Priors uniformes para zeta y R
+    prior_zeta = 1 / (zetamax - zetamin)
+    prior_R = 1 / (Rmax - Rmin)
+    
+    sigma = 0.1 * obs_values[:, None, None]
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None, None] - r4) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_R * prior_zeta
+    marginals_ = np.trapz(posterior, R, axis=0)
+    marginals = np.trapz(marginals_, zeta, axis=1)  
+    plt.plot(obs_values, marginals, linestyle=line_styles[i], color=colors, label=fr"$\eta$ = {e} Mm ")
+
+
+plt.xlabel(r"$\tau_d/P$", fontsize=17)
+plt.ylabel(r"$p(\tau_d/P |\: M_{NL})$", fontsize=18)
+plt.legend(loc="best",fontsize=14)
+plt.tight_layout()  
+plt.show()
+
