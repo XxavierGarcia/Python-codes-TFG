@@ -1,0 +1,48 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 3: Fuga de ondas
+
+# Definición de parámetros
+Pmin, Pmax, nP = 100, 1250, 550  
+P_values = np.linspace(Pmin, Pmax, nP)
+
+ntau_d = 550  
+obs_values = np.linspace(0.01, 10, ntau_d)  # Valores observados
+
+rlmin, rlmax, nrl = 0.0001, 0.3, 550  
+rl = np.linspace(rlmin, rlmax, nrl)
+
+# Priors uniformes L/R
+prior_rl = 1 / (rlmax - rlmin)  
+
+# Cálculo de tau_d / P
+r3 = (4 / (np.pi ** 4)) * rl ** (-2)  
+
+sigma_vals = [0.1, 0.3, 0.5]
+colors = cm.Set1(0)
+
+line_styles = ['-','--',':'] 
+
+plt.figure(figsize=(8, 6))
+for i, sigma_val in enumerate(sigma_vals):
+    
+    sigma = sigma_val * obs_values[:, None]
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None] - r3) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_rl 
+    marginals_ = np.trapz(posterior, rl)
+    
+    plt.plot(obs_values, marginals_,linestyle=line_styles[i], color=colors, label=fr"$\sigma = {int(sigma_val * 100)}\%$")
+
+
+plt.xlabel(r"$\tau_d/P$", fontsize=18)
+plt.ylabel(r"$p(\tau_d/P |\: M_{FO})$", fontsize=18)
+plt.tight_layout()
+plt.legend(fontsize=15)
+plt.show()
+
+
