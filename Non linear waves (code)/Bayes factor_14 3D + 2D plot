@@ -1,0 +1,180 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.colors import BoundaryNorm
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 300
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 300
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 300
+eta_vals = np.linspace(eta_min, eta_max, neta) 
+
+tau_d_min, tau_d_max, ntau_d = 0.9, 10, 300
+tau_P_vals = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)
+R_grid, zeta_grid = np.meshgrid(R, zeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 300
+lR = np.linspace(lR_min, lR_max, nlR)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)
+
+# Priors uniformes para zeta, R y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Modelo 4: Amortiguamiento no lineal
+
+def r4(R, zeta, eta):
+    a = eta / R
+    # Cálculo de tau_d / P
+    r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + zeta) / np.sqrt(zeta**2 - 2*zeta + 97))
+    return r4
+
+def marginal4(eta, tau_P):
+    tau_P_pred = r4(R_grid, zeta_grid, eta)
+    
+    # Calcular likelihood 
+    sigma = 0.1 * tau_P
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+
+    posterior = likelihood * prior_R * prior_zeta
+    
+    marginal = np.trapz(np.trapz(posterior, R, axis=0), zeta, axis=0)
+    
+    return marginal
+
+vectorized_pd = np.vectorize(marginal4)
+marginals_4 = vectorized_pd(eta_grid, tau_P_grid)
+
+marginals_4 /= np.sum(marginals_4)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+
+def marginal(eta, tau_d):
+    sigma = 0.1 * tau_d
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((tau_d - r1) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_zeta * prior_lor
+    marginal = np.trapz(np.trapz(posterior, lR, axis=0), zeta)
+    return marginal
+
+vectorized_marginal = np.vectorize(marginal)
+marginals_1 = vectorized_marginal(eta_grid, tau_P_grid)
+
+marginals_1 /= np.sum(marginals_1)
+
+# Calcular Factor de Bayes
+bf41 = 2 * np.log(marginals_4 / marginals_1)
+bf14 = 2 * np.log(marginals_1 / marginals_4)
+
+bf41_pos = np.copy(bf41)
+bf41_pos[bf41_pos < 0] = 0
+
+bf41_contour = np.copy(bf41)
+bf41_contour[np.isnan(bf41_contour)] = 0
+
+bounds_b41 = [0, 2, 6]
+colors_b41 = ['#FFF4C1','#f4c2c2']
+cmap_b41 = mcolors.ListedColormap(colors_b41)
+cmap_b41.set_over('darkgrey')  
+cmap_b41.set_under('white')
+
+fig = plt.figure(figsize=(12, 9))
+ax = fig.add_subplot(111, projection='3d')
+
+cmap = plt.cm.OrRd
+colors = cmap(np.linspace(0, 1, cmap.N))
+new_colors = colors[65:] #para quitar los colores mas claros del cmap
+new_cmap = cm.colors.ListedColormap(new_colors)
+
+# Contorno de B41 en z=0
+contour = ax.contourf(eta_grid, tau_P_grid, bf41_contour, 
+                      levels=bounds_b41, cmap=cmap_b41, extend='both', 
+                      zdir='z', offset=0, alpha=0.9)
+
+# Superficie de B41
+surf = ax.plot_surface(eta_grid, tau_P_grid, bf41_pos, cmap=new_cmap,
+                       alpha=0.4,rstride=1, cstride=1, antialiased=True)
+
+
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=19)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=19)
+ax.set_zlabel(r'$B_{NLAR}$', fontsize=19)
+
+ax.set_xlim([-2, 32])
+ax.set_ylim([0, 10])
+ax.set_zlim(0, 5)
+ax.view_init(elev=30, azim=255)
+
+cbar=fig.colorbar(contour, ax=ax, shrink=0.5, pad=0.01, orientation='horizontal', label=r'$2\ln(B_{41})$')
+cbar.set_label(r'$B_{NLAR}$', fontsize=17)
+plt.tight_layout()
+plt.show()
+
+# B14 (contorno en z=0)
+bf14_contour = np.copy(bf14)
+bf14_contour[np.isnan(bf14_contour)] = 0  
+
+bounds_b14 = [0, 2, 6, 10, 20, 50, 120]
+colors_b14 = ['#FFF4C1', '#addfad','lightblue', 'lightcyan', 'bisque' ,'indianred']
+norm_b14 = BoundaryNorm(bounds_b14, len(colors_b14))
+cmap_b14 = mcolors.ListedColormap(colors_b14)
+cmap_b14.set_over('darkgrey')  
+cmap_b14.set_under('white')
+
+# B14 (superficie)
+bf14_pos = np.copy(bf14)
+bf14_pos[bf14_pos < 0] = 0
+bf14_pos[bf14_pos > 200] = 200  # límite superior
+
+fig = plt.figure(figsize=(12, 9))
+ax = fig.add_subplot(111, projection='3d')
+
+# Contorno de B14 en z=0
+contour = ax.contourf(eta_grid, tau_P_grid, bf14_contour, 
+                      levels=bounds_b14, cmap=cmap_b14, norm=norm_b14, 
+                      extend='both', zdir='z', offset=0,alpha=0.9)
+
+cmap = plt.cm.OrRd
+colors = cmap(np.linspace(0, 1, cmap.N))
+new_colors = colors[65:] #para quitar los colores mas claros del cmap
+new_cmap = cm.colors.ListedColormap(new_colors)
+
+# Superficie de B14
+surf = ax.plot_surface(eta_grid, tau_P_grid, bf14_pos, cmap=new_cmap,
+                       alpha=0.45)
+
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=19)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=19)
+ax.set_zlabel(r'$B_{ARNL}$', fontsize=19, labelpad=8.5)
+
+ax.set_xlim([-2, 32])
+ax.set_ylim([0, 10])
+ax.set_zlim(0, 200)
+ax.view_init(elev=30, azim=255)
+
+
+cbar=fig.colorbar(contour, ax=ax, shrink=0.5, pad=0.01, orientation='horizontal')
+cbar.set_label(r'$B_{ARNL}$', fontsize=17)
+
+plt.tight_layout()
+plt.show()
