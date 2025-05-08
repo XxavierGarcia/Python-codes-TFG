@@ -1,1 +1,135 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.colors import BoundaryNorm
 
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 101
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 101
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 101
+eta_vals = np.linspace(eta_min, eta_max, neta) 
+
+tau_d_min, tau_d_max, ntau_d = 0.9, 10, 101
+tau_P_vals = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)
+R_grid, zeta_grid = np.meshgrid(R, zeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 101
+lR = np.linspace(lR_min, lR_max, nlR)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)
+
+# Priors uniformes para zeta, R y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+prior_lor = 1 / (lR_max - lR_min)
+
+# Modelo 4: Amortiguamiento no lineal
+
+def r4(R, zeta, eta):
+    a = eta / R
+    # Cálculo de tau_d / P
+    r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + zeta) / np.sqrt(zeta**2 - 2*zeta + 97))
+    return r4
+
+def marginal4(eta, tau_P):
+    tau_P_pred = r4(R_grid, zeta_grid, eta)
+    
+    # Calcular likelihood 
+    sigma = 0.1 * tau_P
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+
+    posterior = likelihood * prior_R * prior_zeta
+    
+    marginal = np.trapz(np.trapz(posterior, R, axis=0), zeta, axis=0)
+    
+    return marginal
+
+vectorized_pd = np.vectorize(marginal4)
+marginals_4 = vectorized_pd(eta_grid, tau_P_grid)
+
+marginals_4 /= np.sum(marginals_4)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+
+def marginal(eta, tau_d):
+    sigma = 0.1 * tau_d
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((tau_d - r1) ** 2) / (2 * sigma ** 2))
+    posterior = like1_obs * prior_zeta * prior_lor
+    marginal = np.trapz(np.trapz(posterior, lR, axis=0), zeta)
+    return marginal
+
+vectorized_marginal = np.vectorize(marginal)
+marginals_1 = vectorized_marginal(eta_grid, tau_P_grid)
+
+marginals_1 /= np.sum(marginals_1)
+
+# Calcular Factor de Bayes
+bf41 = 2 * np.log(marginals_4 / marginals_1)
+bf14 = 2 * np.log(marginals_1 / marginals_4)
+    
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+bounds = [0, 2, 6]
+colors = ['#FFF4C1','#f4c2c2']
+
+cmap = mcolors.ListedColormap(colors)
+cmap.set_over('darkgrey')  
+cmap.set_under('white') 
+
+# Contornos del factor de Bayes
+contour = ax.contourf(eta_grid, tau_P_grid, bf41, 
+                     levels=bounds, cmap=cmap,extend='both')
+cbar = plt.colorbar(contour)
+
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=18)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=20)
+ax.set_title(r'$2\ln(B_{NLAR})$', fontsize=19)
+ax.set_xlim([0.2, 30])
+ax.set_ylim([0.9, 10])
+
+plt.tight_layout()
+plt.show()
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# Niveles de contorno para el factor de Bayes
+bounds = [0, 2, 6, 10, 20, 50, 120]
+colors = ['#FFF4C1', '#addfad','lightblue', 'lightcyan', 'bisque' ,'indianred']   
+
+norm = BoundaryNorm(bounds, len(colors)) #para fijar colores en los intervalos que queramos aunque sean desiguales
+
+cmap = mcolors.ListedColormap(colors)
+cmap.set_over('darkgrey')  
+cmap.set_under('white') 
+
+# Contornos del factor de Bayes
+contour = ax.contourf(eta_grid, tau_P_grid, bf14, 
+                     levels=bounds, cmap=cmap, norm=norm, extend='both')
+cbar = plt.colorbar(contour)
+
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=18)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=20)
+ax.set_title(r'$2\ln(B_{ARNL})$', fontsize=19)
+ax.set_xlim([0.2, 30])
+ax.set_ylim([0.9, 10])
+
+plt.tight_layout()
+plt.show()
