@@ -1,0 +1,76 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 1: Amortiguamiento resonante
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 250
+lR_min, lR_max, nlR = 0.01, 2.0, 250
+
+# Crear mallas de parámetros
+zeta = np.linspace(zetamin, zetamax, nzeta)
+lR = np.linspace(lR_min, lR_max, nlR)
+eta_vals = np.linspace(0.2, 30, 250)
+tau_P_vals = np.linspace(0.9, 10, 250)
+
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)
+Z, LR = np.meshgrid(zeta, lR, indexing='ij')
+
+# Priors uniformes para zeta y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+
+def r1(Z, LR):
+    return (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))
+
+def marginal(eta, tau_P):
+    tau_P_pred = r1(Z, LR)
+    sigma = 0.1 * tau_P
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+    posterior = likelihood * prior_lor * prior_zeta
+    marginal = np.trapz(np.trapz(posterior, lR, axis=1), zeta, axis=0)
+    return marginal
+
+vectorized_pd = np.vectorize(marginal)
+marginals_ = vectorized_pd(eta_grid, tau_P_grid)
+marginals_ /= np.sum(marginals_)
+
+
+cmap = plt.cm.OrRd  
+colors = cmap(np.linspace(0, 1, cmap.N))
+new_colors = colors[65:]
+new_cmap = cm.colors.ListedColormap(new_colors)
+
+# Crear figura 3D
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+# Graficar la distribución posterior  3D
+ax.plot_surface(eta_grid, tau_P_grid, marginals_, 
+                cmap=new_cmap, edgecolor='none',alpha=1, rcount=800, ccount=800)
+
+new_colors = colors[65:]
+new_cmap = cm.colors.ListedColormap(new_colors)
+
+# Graficar el gráfico 2D en z=0
+contour = ax.contourf(eta_grid, tau_P_grid, marginals_, levels=8, cmap=new_cmap, extend="both", zdir='z', offset=0)
+
+cbar = fig.colorbar(contour, ax=ax, orientation='horizontal', pad=0.01, shrink=0.5)
+cbar.set_label(r"$p(\eta, \tau_d/P |\: M_{AR})$", fontsize=14)
+
+ax.set_xlabel(r'$\eta$ (Mm)', fontsize=17)
+ax.set_ylabel(r'$\tau_d/P$', fontsize=17)
+ax.set_zlabel(r"$p(\eta, \tau_d/P |\: M_{AR})$", fontsize=17, labelpad=13.5)
+ax.tick_params(axis='z', pad=8)
+
+ax.view_init(elev=30, azim=235)
+
+plt.tight_layout()
+plt.savefig("Marginal_AR_nolineal.png", dpi=400, bbox_inches='tight', pad_inches=0.4)
+plt.show()
