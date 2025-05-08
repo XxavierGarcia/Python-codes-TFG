@@ -1,0 +1,89 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Cargar datos observacionales 
+data1 = np.loadtxt('data1.txt', skiprows=51, usecols=(-7, -6, -3, -2, -1))
+data2 = np.loadtxt('data.txt', skiprows=103, usecols=(-9, -8, -4, -2, -1))
+
+# Extraer variables 
+period1, errperiod1, eta1, dampingtime1, errdtime1 = data1.T
+period2, errperiod2, eta2, dampingtime2, errdtime2 = data2.T
+
+# Concatenar los datos 
+period = np.concatenate((period1, period2)) * 60
+errperiod = np.concatenate((errperiod1, errperiod2)) * 60
+dampingtime = np.concatenate((dampingtime1, dampingtime2)) * 60
+errdtime = np.concatenate((errdtime1, errdtime2)) * 60
+eta_obs = np.concatenate((eta1, eta2))
+
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 200
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 200
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 101
+eta_vals = np.linspace(eta_min, eta_max, neta) 
+
+tau_d_min, tau_d_max, ntau_d = 0.85, 10, 100
+tau_P_vals = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+eta_grid, tau_P_grid = np.meshgrid(eta_vals, tau_P_vals)
+R_grid, zeta_grid = np.meshgrid(R, zeta)
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+def r4(R, zeta, eta):
+    a = eta / R
+    # Cálculo de tau_d / P
+    r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + zeta) / np.sqrt(zeta**2 - 2*zeta + 97))
+    return r4
+
+def marginal(eta, tau_P):
+    tau_P_pred = r4(R_grid, zeta_grid, eta)
+    
+    sigma = 0.1 * tau_P
+    # Calcular likelihood 
+    likelihood = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                np.exp(-((tau_P - tau_P_pred)**2) / (2 * sigma ** 2))
+
+    posterior = likelihood * prior_R * prior_zeta
+    
+    marginal = np.trapz(np.trapz(posterior, R, axis=0), zeta, axis=0)
+    
+    return marginal
+
+vectorized_pd = np.vectorize(marginal)
+marginals_ = vectorized_pd(eta_grid, tau_P_grid)
+
+marginals_ /= np.sum(marginals_)
+ 
+fig, ax = plt.subplots(figsize=(8, 6))
+contour = ax.contourf(eta_grid, tau_P_grid, marginals_, levels=8, cmap='OrRd', extend="both")
+
+# Encontrar el contorno donde la probabilidad es 4e-6
+contour_level = 4e-6
+CS = ax.contour(eta_grid, tau_P_grid, marginals_, levels=[contour_level], colors='black', linestyles='dotted', linewidths=1.2)
+
+plt.colorbar(contour, ax=ax)
+ 
+scatter=ax.scatter(eta_obs, dampingtime/period, edgecolors='black', 
+            facecolors='darkorange', label="Datos observacionales")
+
+line = Line2D([0], [0], color='black', linewidth=1.3, linestyle='dotted')
+ax.legend([line, scatter], [r'$p(\eta, \tau_d/P |\: M_{NL})= 4\cdot 10^{-6}$', 'Datos observacionales'], loc='best', fontsize=13)
+
+plt.xlabel(r'$\eta$ (Mm)', fontsize=17)
+plt.ylabel(r'$\tau_d/P$', fontsize=19)
+plt.ylim([0.85,10])
+plt.xlim([0,30])
+plt.title(r"$p(\eta, \tau_d/P |\: M_{NL})$", fontsize=18)
+plt.show()
