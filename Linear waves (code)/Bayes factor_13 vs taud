@@ -1,0 +1,82 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+rlmin, rlmax, nrl = 0.0001, 0.3, 300  # Mm (1Mm = 1000km)
+rl = np.linspace(rlmin, rlmax, nrl)
+
+zetamin, zetamax, nzeta = 1.01, 10.0, 500
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.0001, 2.0, 500
+lR = np.linspace(lR_min, lR_max, nlR)
+
+P_min, P_max, nP = 150, 1250, 500
+P_values = np.linspace(P_min, P_max, nP)
+
+tau_d_min, tau_d_max, ntau_d = 0.01, 10, 500
+obs_values = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR, indexing='ij')
+
+# Modelo 1: Amortiguamiento resonante
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / (LR)) * ((Z + 1) / (Z - 1))
+
+# Modelo 3: Fuga de ondas
+
+# Cálculo de tau_d / P
+r3 = (4 / (np.pi**4)) * rl**(-2) 
+
+# Priors uniformes para zeta, L/R y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+prior_rl = 1 / (rlmax - rlmin)
+
+sigma = 0.1 * obs_values[:, None, None]
+
+like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((obs_values[:, None, None] - r1) ** 2) / (2 * sigma ** 2))
+posterior1 = like1_obs * prior_zeta * prior_lor
+marginals1 = np.trapz(posterior1, lR)
+marginals_1 = np.trapz(marginals1, zeta)
+
+
+sigma_3 = 0.1 * obs_values[:, None]
+
+like2_obs = (1 / (np.sqrt(2 * np.pi) * sigma_3)) * np.exp(-((obs_values[:, None] - r3) ** 2) / (2 * sigma_3 ** 2))
+posterior2 = like2_obs * prior_rl
+marginals_3 = np.trapz(posterior2, rl)
+
+
+bf31 = 2 * np.log(marginals_3 / marginals_1)
+bf13 = 2 * np.log(marginals_1 / marginals_3)
+
+
+plt.plot(obs_values, bf13, linewidth=1.5, color='black')
+plt.plot(obs_values, bf31, linewidth=1.5, color='black', linestyle='dashed')
+
+plt.fill_between(obs_values, -30, 30, where=(2 <= bf13) & (bf13 < 6), color='lightgreen', alpha=0.35)
+plt.fill_between(obs_values, -30, 30, where=(6 <= bf13) & (bf13 < 10), color='limegreen', alpha=0.4)
+plt.fill_between(obs_values, -30, 30, where=(bf13 >= 10), color='forestgreen', alpha=0.6)
+
+plt.fill_between(obs_values, -30, 30, where=(2 <= bf31) & (bf31 < 6), color='lightgreen', alpha=0.35)
+plt.fill_between(obs_values, -30, 30, where=(6 <= bf31) & (bf31 < 10), color='limegreen', alpha=0.4)
+plt.fill_between(obs_values, -30, 30, where=(bf31 >= 10), color='forestgreen', alpha=0.6)
+
+plt.text(5, 22, "$EAM$", fontsize=11, ha='center', color='black', rotation=0)
+
+plt.text(6.5, 2.2, r"$BF_{FOAR}$", fontsize=12, color='black', rotation=0)  
+plt.text(6.5, -3.8, r"$BF_{ARFO}$", fontsize=12, color='black', rotation=0)
+
+
+plt.xlabel(r"$\tau_d/P$", fontsize=14)
+plt.ylabel(r"$2\ln(\mathrm{BF_{M_1M_2}})$", fontsize=14)
+plt.ylim(-25, 25)
+plt.xlim([0, 10])
+plt.xticks(np.arange(0, 11, 1)) 
+plt.show()
