@@ -1,0 +1,115 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 10.0, 200
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+lR_min, lR_max, nlR = 0.01, 2.0, 200
+lR = np.linspace(lR_min, lR_max, nlR)
+
+rlmin, rlmax, nrl = 0.0001, 0.3, 200  # Mm (1Mm = 1000km)
+rl = np.linspace(rlmin, rlmax, nrl)
+
+P_min, P_max, nP = 150, 1250, 200  
+P_values = np.linspace(P_min, P_max, nP)
+
+tau_d_min, tau_d_max, ntau_d = 150, 4000, 200  
+tau_d_values = np.linspace(tau_d_min, tau_d_max, ntau_d)
+
+# Creación de una malla de valores
+Z, LR = np.meshgrid(zeta, lR)  
+
+# Modelo 1: Amortiguamiento resonante
+
+# Cálculo de tau_d / P
+r1 = (2 / np.pi) * (1 / LR) * ((Z + 1) / (Z - 1))  # tau_d/P
+
+# Modelo 3: Fuga de ondas
+
+# Cálculo de tau_d / P
+r3 = (4 / (np.pi**4)) * rl**(-2)  # (nrl,)
+
+# Priors uniformes para zeta, L/R y l/R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_lor = 1 / (lR_max - lR_min)
+prior_rl = 1 / (rlmax - rlmin)
+
+obs_values = np.linspace(0.01, 10, ntau_d)  
+
+
+marginals_ = np.zeros((ntau_d, nP))
+
+# Bucle sobre tau_d_values y P_values
+for i, tau_d in enumerate(tau_d_values):
+    for j, P in enumerate(P_values):
+        obs_value = tau_d / P  
+        sigma = 0.1 * obs_value
+
+        # Likelihood 
+        like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma)) * \
+                    np.exp(-((obs_value - r1) ** 2) / (2 * sigma ** 2))
+
+        # Calcular posterior
+        posterior = like1_obs * prior_zeta * prior_lor
+
+        # p(zeta | r)
+        marginals1 = np.trapz(posterior, lR, axis=0)
+        marginals_[i, j] = np.trapz(marginals1, zeta)  
+
+marginals_ /= np.sum(marginals_)  
+
+
+marginals_3 = np.zeros((ntau_d, nP))
+
+# Bucle sobre tau_d_values y P_values
+for i, tau_d in enumerate(tau_d_values):
+    for j, P in enumerate(P_values):
+        obs_value = tau_d / P  
+        sigma_2 = 0.1 * obs_value
+
+        # Likelihood
+        like2_obs = (1 / (np.sqrt(2 * np.pi) * sigma_2)) * \
+                    np.exp(-((obs_value - r3) ** 2) / (2 * sigma_2 ** 2))
+
+        # Calcular posterior
+        posterior = like2_obs * prior_rl
+
+        # p(zeta | r)
+        marginals_3[i, j] = np.trapz(posterior, rl)
+
+marginals_3 /= np.sum(marginals_3)  
+
+# Bayes factors
+bf31 = 2 * np.log((marginals_3) / (marginals_))  # Bayes factor: Model 3 vs Model 1
+bf13 = 2 * np.log((marginals_) / (marginals_3))  # Bayes factor: Model 1 vs Model 3
+
+# Definir niveles y colores 
+bounds = [-10, -6, -2, 2, 6, 10]
+colors = ['#b2ffff', '#addfad', '#FFF4C1', '#f4c2c2', '#99badd']
+
+cmap = mcolors.ListedColormap(colors)
+cmap.set_over('darkgrey')  
+cmap.set_under('white') 
+
+# Gráfico 2D
+fig_2d, ax_2d = plt.subplots(figsize=(8, 6))
+contour = ax_2d.contourf(P_values, tau_d_values, bf13, levels=bounds, cmap=cmap, extend='both')
+cbar = plt.colorbar(contour, extend='both')
+cbar.set_ticks([-10, -6, -2, 2, 6, 10]) 
+ax_2d.set_title(r"$2\ln(B_{ARFO})$", fontsize=18)
+ax_2d.set_xlabel('$P$ (s)', fontsize=17)
+ax_2d.set_ylabel(r'$\tau_d$ (s)', fontsize=19)
+plt.tight_layout()
+ax_2d.set_ylim([150,4000])
+ax_2d.set_xlim([150,1250])
+
+#recta tau_d = P
+ax_2d.plot(P_values, P_values, linestyle='--', color='black', label=r'$\tau_d = P$')
+plt.show()
+
+
