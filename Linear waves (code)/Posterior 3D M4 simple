@@ -1,0 +1,69 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Modelo 4: Amortiguamiento no lineal
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 550
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 550
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 550
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+a = eta_values / R_grid
+
+# Cálculo de tau_d / P
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * a)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+# Priors uniformes para zeta y R
+prior_zeta = 1 / (zetamax - zetamin)
+prior_R = 1 / (Rmax - Rmin)
+
+# Valores observacionales 
+obs_values = np.array([1.5, 3, 10])  
+sigma = 0.4 * obs_values
+
+# Cálculo y visualización del posterior en 3D y 2D 
+for i, obs_value in enumerate(obs_values):
+    
+    # Cálculo de la likelihood para el modelo
+    like1_obs = (1 / (np.sqrt(2 * np.pi) * sigma[i])) * \
+                np.exp(-((obs_value - r4)**2) / (2 * sigma[i]**2))
+    
+    # Cálculo del posterior
+    posterior = like1_obs * prior_zeta * prior_R
+    
+
+    fig_3d = plt.figure(figsize=(10, 8))
+    ax_3d = fig_3d.add_subplot(111, projection='3d')
+    
+    cmap = plt.cm.OrRd   
+    colors = cmap(np.linspace(0, 1, cmap.N))
+    new_colors = colors[50:]
+    new_cmap = cm.colors.ListedColormap(new_colors)
+    
+    # Graficar la superficie 3D
+    ax_3d.plot_surface(Z, R_grid, posterior, cmap=new_cmap, edgecolor='none', rcount=1000, 
+                       ccount=1000, alpha=0.5)
+    
+
+    ax_3d.set_title(fr"$\tau_d/P = {obs_value}$", fontsize=18)
+    ax_3d.set_xlabel(r'$\zeta$', fontsize=17)
+    ax_3d.set_ylabel('$R$', fontsize=17)
+    ax_3d.set_zlabel(r"$p(\zeta, R | \tau_d/P, M_4)$", fontsize=17, labelpad=11.5)
+    ax_3d.zaxis.set_tick_params(pad=7)
+    
+    plt.tight_layout()
+    plt.savefig(f"Posterior3D_nolineal_simple__{obs_value}.png", dpi=400, bbox_inches='tight', pad_inches=0.4)
+    plt.show()
