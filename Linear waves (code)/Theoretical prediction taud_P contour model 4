@@ -1,0 +1,37 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif', size=12)
+
+# Definición de parámetros
+zetamin, zetamax, nzeta = 1.01, 9.5, 700
+zeta = np.linspace(zetamin, zetamax, nzeta)
+
+Rmin, Rmax, nR = 0.5, 5, 700
+R = np.linspace(Rmin, Rmax, nR)
+
+eta_min, eta_max, neta = 0.2, 30, 700
+eta_values = np.linspace(eta_min, eta_max, neta) 
+
+# Creación de una malla de valores
+Z, R_grid = np.meshgrid(zeta, R)  
+
+# Modelo 4: Amortiguamiento no lineal
+
+eta_values=30
+
+# Cálculo de tau_d / P
+r4 = 40 * np.sqrt(np.pi) * (1 / (2 * np.pi * eta_values/ R_grid)) * ((1 + Z) / np.sqrt(Z**2 - 2*Z + 97))
+
+plt.figure(figsize=(8, 6))
+c = plt.contourf(Z, R_grid, r4, 11, cmap='Greens', extend="both")
+plt.xlabel(r'$\zeta$', fontsize=19)
+plt.ylabel(r'$R$', fontsize=19)
+plt.title(r'$\tau_d/P$', fontsize=19)
+plt.colorbar(c)
+plt.tight_layout()
+plt.show()
+
